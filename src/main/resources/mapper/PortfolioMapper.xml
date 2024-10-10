@@ -13,7 +13,7 @@
         <result column="expectedReturn" property="expectedReturn"/>
         <result column="riskLevel" property="riskLevel"/>
         <result column="portfolioName" property="portfolioName"/>
-        <result column="userNum" property="userNum"/>
+        <result column="memberNum" property="memberNum"/>
         <collection property="portfolioItems" resultMap="portfolioItemMap"/>
     </resultMap>
 
@@ -26,15 +26,6 @@
         <result column="expectedReturn" property="expectedReturn"/>
     </resultMap>
 
-    <select id="getPortfolioItemList" resultType="com.be.portfolio.domain.PortfolioItemVO">
-        select pi.portfolioitemID, pi.portfolioID, pi.productID, pi.stockCode, pi.amount, pi.expectedReturn, p.productType, s.dailyPrice
-        from portfolioitem pi
-            left outer join product p
-                on pi.productID = p.productID
-            left outer join stock s
-                on pi.stockCode = s.stockCode
-        where pi.portfolioID = #{portfolioId}
-    </select>
     <select id="getPortfolio" resultType="com.be.portfolio.domain.PortfolioVO">
         select * from portfolio
         where portfolioID = #{portfolioId}
@@ -42,16 +33,24 @@
     <select id="getAllIds" resultType="java.lang.Integer">
         select portfolioID from portfolio;
     </select>
+    <select id="getPortfolioList" resultType="com.be.portfolio.domain.PortfolioVO">
+        select * from portfolio
+        where memberNum = #{memberNum}
+    </select>
+    <select id="getPortfolioItemList" resultType="com.be.portfolio.domain.PortfolioItemVO">
+        select * from portfolioitem
+        where portfolioID = #{portfolioId}
+    </select>
     <insert id="insertPortfolio">
-        insert into portfolio(creationDate, total, expectedReturn, riskLevel, portfolioName, userNum)
-        values(#{creationDate}, #{total}, #{expectedReturn}, #{riskLevel}, #{portfolioName}, #{userNum})
+        insert into portfolio(portfolioName, creationDate, total, expectedReturn, riskLevel, memberNum)
+        values(#{portfolioName}, CURRENT_TIMESTAMP, #{total}, #{expectedReturn}, #{riskLevel}, #{memberNum})
         <selectKey resultType="Int" keyProperty="portfolioId" keyColumn="portfolioID" order="AFTER">
             SELECT LAST_INSERT_ID()
         </selectKey>
     </insert>
     <insert id="insertPortfolioItem">
-        insert into portfolioitem(portfolioID, productID, stockCode, amount, expectedReturn)
-        values(#{portfolioId}, #{productId}, #{stockCode}, #{amount}, #{expectedReturn})
+        insert into portfolioitem(portfolioID, productID, stockCode, amount, expectedReturn, riskLevel)
+        values(#{portfolioId}, #{productId}, #{stockCode}, #{amount}, #{expectedReturn}, #{riskLevel})
     </insert>
     <update id="updatePortfolio">
         update portfolio set total=#{total}, expectedReturn=#{expectedReturn}, riskLevel=#{riskLevel} where portfolioID=#{portfolioId}

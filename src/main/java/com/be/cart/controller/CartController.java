@@ -1,65 +1,72 @@
 package com.be.cart.controller;
 
-import com.be.cart.domain.CartItemVO;
+import com.be.auth.JwtUtils;
 import com.be.cart.dto.req.CartItemReqDto;
 import com.be.cart.dto.res.CartItemResDto;
 import com.be.cart.service.CartService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.IOException;
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
+@Log4j
 public class CartController {
     private final CartService cartService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JwtUtils jwtUtils;
 
-    @GetMapping("/{userNum}")
-    public void getCartItems(@PathVariable int userNum, HttpServletRequest request) {
-            HttpSession session = request.getSession();
-            List<CartItemVO> cartList = cartService.getCartList(userNum).stream().map(CartItemResDto::toVO).toList();
-            session.setAttribute("cartList", cartList);
-
-//          System.out.println(session.getAttribute("cartList"));
-
-//          return ResponseEntity.ok(cartService.getCartList(userNum));
-    }
-
-    @PostMapping
-    public ResponseEntity<CartItemResDto> addCartItem(CartItemReqDto cartItem, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    @GetMapping("/init")
+    public void initCartList(HttpServletRequest request) {
         HttpSession session = request.getSession();
+        List<CartItemResDto> cartList = cartService.initCartList(jwtUtils.extractMemberNum(request));
 
-        if(session.getAttribute("userNum") == null) {
-            response.sendRedirect("/api/login");
-        }
-        cartItem.setUserNum((Integer) session.getAttribute("userNum"));
-
-        List<CartItemVO> cartList = (List<CartItemVO>) session.getAttribute("cartList");
-        cartList.add(cartItem.toVO());
+        log.info(cartList);
 
         session.setAttribute("cartList", cartList);
-        return ResponseEntity.ok(cartService.addCartItem(cartItem));
     }
 
-    @DeleteMapping("/{cartID}")
+    @GetMapping("/list")
+    public ResponseEntity<List<CartItemResDto>> getCartList(HttpServletRequest request) {
+        HttpSession session = request.getSession();
+        List<CartItemResDto> cartList = objectMapper.convertValue(session.getAttribute("cartList"),
+                new TypeReference<List<CartItemResDto>>() {});
+
+        log.info(cartList);
+
+        return ResponseEntity.ok(cartList);
+    }
+
+    @PostMapping("/items")
+    public void addCartItem(@RequestBody @Valid CartItemReqDto cartItem, HttpServletRequest request) {
+        HttpSession session = request.getSession();
+
+        cartItem.setMemberNum(jwtUtils.extractMemberNum(request));
+        List<CartItemResDto> cartList = objectMapper.convertValue(session.getAttribute("cartList"),
+                new TypeReference<List<CartItemResDto>>() {});
+
+        log.info(cartList);
+
+        session.setAttribute("cartList", cartService.addCartItem(cartList, cartItem));
+    }
+
+    @DeleteMapping("/items/{cartID}")
     public void deleteCartItem(@PathVariable int cartID, HttpServletRequest request) {
-        List<CartItemVO> cartList = (List<CartItemVO>) request.getSession().getAttribute("cartList");
-        if(cartList != null) {
-            return;
-        }
+        HttpSession session = request.getSession();
 
-        for(int i = 0; i < cartList.size(); i++) {
-            if(cartList.get(i).getCartId() == cartID) cartList.remove(i);
-        }
-        request.getSession().setAttribute("cartList", cartList);
+        List<CartItemResDto> cartList = objectMapper.convertValue(session.getAttribute("cartList"),
+                new TypeReference<List<CartItemResDto>>() {});
 
-        cartService.deleteCartItem(cartID);
+        session.setAttribute("cartList", cartService.deleteCartItem(cartList, cartID));
     }
 }
 

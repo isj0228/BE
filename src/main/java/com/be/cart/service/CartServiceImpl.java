@@ -15,30 +15,49 @@ public class CartServiceImpl implements CartService {
     private final CartMapper cartMapper;
 
     @Override
-    public List<CartItemResDto> getCartList(int userNum) {
-        return cartMapper.getCartItemList(userNum)
+    public List<CartItemResDto> initCartList(long memberNum) {
+        return cartMapper.getCartItemList(memberNum)
                 .stream().map(CartItemResDto::of).toList();
     }
 
     @Override
-    public CartItemResDto addCartItem(CartItemReqDto cart) {
-//        if(checkCartItem(cart)) throw new NotAvailableProductException("장바구니에 존재하는 상품입니다.");
+    public List<CartItemResDto> addCartItem(List<CartItemResDto> cartList, CartItemReqDto cartItem) {
+        try {
+            for(CartItemResDto cartItemResDto : cartList) {
+                if(cartItemResDto.getProductId() == cartItem.getProductId()) throw new Exception("중복 아이템 입니다");
+            }
 
-        CartItemVO cartVO = cart.toVO();
-        CartItemResDto cartResDto = CartItemResDto.of(cartVO);
-        cartResDto.setCartId(cartMapper.addCartItem(cartVO));
+            CartItemVO cartVO = cartItem.toVO();
+            CartItemResDto cartResDto = CartItemResDto.of(cartVO);
+            cartResDto.setCartId(cartMapper.addCartItem(cartVO));
 
-        return cartResDto;
+            cartList.add(cartResDto);
+
+            return cartList;
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("장바구니 담기에서 에러 발생");
+        }
+        return cartList;
     }
 
     @Override
-    public void deleteCartItem(int cartId) {
-        cartMapper.deleteCartItem(cartId);
-    }
+    public List<CartItemResDto> deleteCartItem(List<CartItemResDto> cartList, int cartId) {
+        try {
 
-    @Override
-    public boolean checkCartItem(CartItemReqDto cart) {
-        if(cartMapper.checkCartItem(cart.getUserNum(), cart.getProductId()) == null) return false;
-        return true;
+            for(int i = 0; i < cartList.size(); i++) {
+                if(cartList.get(i).getCartId() == cartId) cartList.remove(i);
+            }
+
+            cartMapper.deleteCartItem(cartId);
+
+            return cartList;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("장바구니 삭제 과정에서 에러 발생");
+        }
+
+        return cartList;
     }
 }

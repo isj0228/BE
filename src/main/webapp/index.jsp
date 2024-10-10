@@ -39,7 +39,13 @@
   <button type="submit">Submit</button>
   </form>
 
+<form action="/api/stock/fetch" method="get">
+  <button type="submit">주식 DB 추가하기</button>
+</form>
 
+<form action="/api/stock/data" method="get">
+  <button type="submit">주식 json 추출</button>
+</form>
 
 <h3>주식 검색</h3>
 <!-- 검색 폼: 서버로 검색어를 전송 -->
@@ -97,5 +103,8 @@
             });
   }
 </script>
+<form action="http://localhost:8080/api/personas/get" method="get">
+    <button type="submit">페르소나 확인</button>
+</form>
     </body>
 </html>
